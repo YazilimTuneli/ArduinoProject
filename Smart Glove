@@ -1,0 +1,171 @@
+
+  #include<Wire.h>    // I2C fonksiyonlarını kullanabilmek için Wire.h kütüphanesi
+  #include <SD.h>     // SD Card Kütüphanesi
+  #include <TMRpcm.h> // Hopörlörü Kullanbilmek için gerekli kütüphane
+  #include <SPI.h>    // SPI fonksiyonlarını kullanabilmek için SPI.h kütüphanesi1
+  #include <LCD5110_Basic.h> // 5110 ekran kullanımı için ekran  kütüphanesi
+
+
+  #define CSpin    53
+  TMRpcm tmrpcm;
+  LCD5110 mynokia(26,27,28,29,30);
+  extern uint8_t SmallFont[];
+  extern uint8_t my_logo[];
+
+  const int MPU=0x68;//MPU-6050'nin I2C haberleşme adresi
+  int AcZ_value;
+  int16_t AcX,AcY,AcZ,Tmp,GyX,GyY,GyZ;// IMU'dan alınacak değerlerin kaydedileceği değişkenler 
+
+  int sensor1,sensor2,sensor3,sensor4,sensor5; // Her bir parmak için kullanılacak olan flex sensorlerin değerlerinin okunacağı değişkenler
+
+void setup(){
+  
+  Wire.begin();
+  Wire.beginTransmission(MPU);
+  Wire.write(0x6B);
+  Wire.write(0); // MPU-6050 çalıştırıldı 
+  Wire.endTransmission(true);
+  // I2C haberleşmesi başlatıldı ve MPU-6050'nin ilk ayarları yapıldı
+  
+  tmrpcm.speakerPin = 11; //Eğer arduino uno kullanıyorsanız 9, mega ise 11 yazın
+  Serial.begin(9600); // serial açılıyor
+  mynokia.InitLCD();//Ekranı başlatıyoruz.
+  mynokia.drawBitmap(0,0,my_logo,84,48);//Daha sonra 
+  
+  delay(2000); 
+  mynokia.clrScr();
+  mynokia.setFont(SmallFont);
+  mynokia.print("Yazilim", CENTER, 6);
+  mynokia.print("Tuneli", CENTER, 18);
+  delay(2000);
+  mynokia.clrScr();
+  if (!SD.begin(CSpin)) {  //kart başlatılamazsa
+    Serial.println("SD Kart yok yada baglanti basarisiz");
+    return; // programı sonlandırır
+  }
+  mynokia.setFont(SmallFont);
+  mynokia.print("SD Kart", CENTER, 6);
+  mynokia.print("baglandi",CENTER, 18);
+  Serial.println("SD Kart baglandi");
+  tmrpcm.volume(1); // 1 açık, 0 kapalı (Mute)
+  tmrpcm.setVolume(4); // Ses düzeyi 0-7 arası olabilir.  
+  
+}
+
+void loop(){
+  
+  verileriOku();//IMU'dan değerler okundu 
+
+  Serial.print("ivmeX = ");
+  Serial.print(AcX);
+  Serial.print(" | ivmeY = "); 
+  Serial.print(AcY);
+  Serial.print(" | ivmeZ = "); 
+  Serial.print(AcZ);  
+  Serial.print(" | GyroX = "); 
+  Serial.print(GyX);
+  Serial.print(" | GyroY = "); 
+  Serial.print(GyY);
+  Serial.print(" | GyroZ = "); 
+  Serial.println(GyZ);
+  
+    
+  AcZ_value = map(AcZ, 0, 17000, 0,255);
+  Serial.print(" | AcZ_value = ");
+  Serial.println( AcZ_value);
+  
+  sensor1= analogRead(0); // Parmak 1 felx sensor
+  sensor1=map(sensor1, 700, 900, 0,255);
+  Serial.print("analog input1: ");
+  Serial.print(sensor1,DEC);
+  delay(500);
+ 
+  sensor2= analogRead(1); // Parmak 2 flex sensor
+  sensor2=map(sensor2, 700, 900, 0,255);
+  Serial.print("analog input2: ");
+  Serial.print(sensor2,DEC);
+  delay(500);
+
+    
+  sensor3= analogRead(2);// Parmak 3 flex sensor
+  sensor3=map(sensor3, 700, 900, 0,255);
+  Serial.print("analog input3: ");
+  Serial.print(sensor3,DEC);
+  delay(500);
+
+  sensor4= analogRead(3);// Parmak 4 flex sensor
+  sensor4=map(sensor4, 700, 900, 0,255);
+  Serial.print("analog input4: ");
+  Serial.print(sensor4,DEC);
+  delay(500);
+
+  sensor5= analogRead(4);// Parmak 5 flex sensor
+  sensor5=map(sensor5, 700, 900, 0,255);
+  Serial.print("analog input5: ");
+  Serial.print(sensor5,DEC);
+  delay(500);
+
+  delay(1000);
+
+  //Sensorlerden okunan değerlere göre ekrana yazılar yazılıp,Sd Card'a kayıtlı ses dosyaları yürütülmektedir.
+    
+if ((sensor5>290 && sensor5<325 ) && (sensor2>330  &&  sensor2<340) && (AcZ_value < 190 &&  AcZ_value>0)){
+   mynokia.clrScr();
+   mynokia.setFont(SmallFont);
+   mynokia.print("Merhaba", CENTER, 6);
+  Serial.println("Merhaba");
+  tmrpcm.play("MERHABA.wav"); // Wav dosyasını yürüt
+  delay(1000);
+}
+
+else if ((sensor1>249 && sensor1<281) && (sensor2 > 314 && sensor2 < 336 ) && (sensor3 > 275  && sensor3 < 295) && (sensor4>309 && sensor4 < 334) && (sensor5 >309 && sensor5 < 324) && (AcZ_value < -10)){
+   mynokia.clrScr();
+   mynokia.setFont(SmallFont);
+   mynokia.print("Iyiyim", CENTER, 6);
+  Serial.println("Iyiyim");
+  tmrpcm.play("YIYIM.wav"); // Wav dosyasını yürüt
+  delay(1000);
+}
+else if ((sensor1>264 && sensor1<279) && (sensor2 > 320 && sensor2 < 336 ) && (sensor3 > 285 && sensor3 < 306) && (sensor4>300 && sensor4 < 316) && (sensor5 >316 && sensor5 < 336) && (AcZ_value < -50 && AcZ_value > -240)) {
+   mynokia.clrScr();
+   mynokia.setFont(SmallFont);
+   mynokia.print("Nasilsin", CENTER, 6);
+  Serial.println("Nasilsin");
+  tmrpcm.play("NASILSIN.wav"); // Wav dosyasını yürüt
+  delay(1000);
+}
+else if ((sensor1>189 && sensor1<225) && (sensor2 > 279 && sensor2 < 325 ) && (sensor3 > 220 && sensor3 < 251) && (sensor4>239 && sensor4 < 266) && (sensor5 >321 && sensor5 < 336) && (AcZ_value < 20  && AcZ_value > -100) ){
+   mynokia.clrScr();
+   mynokia.setFont(SmallFont);
+   mynokia.print("Iyi Gunler", CENTER, 6);
+  Serial.println("Iyi Gunler");
+  tmrpcm.play("GUNLER.wav"); // Wav dosyasını yürüt
+  delay(1000);
+}
+else{
+  Serial.println("Tanimsiz");
+}
+}
+void verileriOku(){
+  
+  Wire.beginTransmission(MPU);
+  Wire.write(0x3B); 
+  Wire.endTransmission(false);
+  Wire.requestFrom(MPU,14,true);
+  
+   /* 
+  * Sırası ile okunan her iki byte birleştirilerek sırası ile değişkenlere yazdırıldı
+  * Böylece IMU'dan tüm değerler okunmuş oldu
+  * 0X3B adresi imu değerlerinden ilk sensörün değerine denk gelmektedir.
+  * IMU'dan tüm değerlerin okunabilmesi için bu adresten başlandı
+  */
+  
+  AcX=Wire.read()<<8|Wire.read();   
+  AcY=Wire.read()<<8|Wire.read(); 
+  AcZ=Wire.read()<<8|Wire.read(); 
+  Tmp=Wire.read()<<8|Wire.read(); 
+  GyX=Wire.read()<<8|Wire.read(); 
+  GyY=Wire.read()<<8|Wire.read();  
+  GyZ=Wire.read()<<8|Wire.read();
+ 
+}
