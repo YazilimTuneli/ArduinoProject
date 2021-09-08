@@ -1,0 +1,20 @@
+#include "SD.h"       // SD Kart kütüphanesi
+#include "TMRpcm.h"   // SD Karttan .Wav dosyalarını oynatmak için gerekli kütüphane
+#include "SPI.h"      // SPI fonksiyonlarını kullanabilmek için gerekli kütüphane
+
+#define SD_ChipSelectPin 53
+TMRpcm tmrpcm;
+
+void setup(){
+tmrpcm.speakerPin = 11; // Uno ve Nano için 9, Mega için 5,6,11
+Serial.begin(9600);
+if (!SD.begin(SD_ChipSelectPin)) {
+Serial.println("SD BASARISIZ");
+return;
+}
+
+tmrpcm.setVolume(4);   // Ses Dosyasının Sesini Ayarla
+tmrpcm.play("GUNLER.wav"); // Ses Dosyasını Oynat
+}
+
+void loop(){  }
